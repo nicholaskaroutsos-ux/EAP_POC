@@ -1,0 +1,2323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>EAP — Agent Platform</title>
+<style>
+  :root {
+    --bg: #f7f6f9;
+    --surface: #ffffff;
+    --surface-2: #fafafc;
+    --border: #e8e6ec;
+    --border-strong: #d6d2dc;
+    --text: #1a1126;
+    --text-muted: #6b6577;
+    --text-subtle: #9c95a6;
+    /* Equinix brand */
+    --primary: #E91C24;          /* Equinix red */
+    --primary-hover: #c01820;
+    --primary-soft: #fdecee;
+    --purple: #7739D9;           /* Equinix purple */
+    --purple-hover: #5f29b8;
+    --purple-soft: #f1eafd;
+    --success: #10b981;
+    --success-soft: #ecfdf5;
+    --warning: #f59e0b;
+    --warning-soft: #fffbeb;
+    --danger: #E91C24;
+    --danger-soft: #fdecee;
+    --teal: #0d9488;
+    --teal-soft: #f0fdfa;
+    --shadow-sm: 0 1px 2px rgba(26,17,38,0.04);
+    --shadow-md: 0 4px 12px rgba(26,17,38,0.08);
+    --shadow-lg: 0 12px 32px rgba(26,17,38,0.14);
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Inter", Roboto, sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--bg);
+    overflow: hidden;
+  }
+  button { font-family: inherit; font-size: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+  input, select, textarea { font-family: inherit; font-size: inherit; color: var(--text); }
+
+  /* Layout */
+  .app { display: grid; grid-template-rows: 56px 1fr; height: 100vh; }
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center;
+    padding: 0 20px; gap: 16px;
+  }
+  .logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 15px; }
+  .logo-mark {
+    width: 32px; height: 28px;
+    border-radius: 7px;
+    background: linear-gradient(135deg, #E91C24, #7739D9);
+    display: grid; place-items: center;
+    color: white; font-size: 11px; font-weight: 800; letter-spacing: 0.02em;
+  }
+  .topbar-spacer { flex: 1; }
+  .topbar-actions { display: flex; align-items: center; gap: 10px; }
+
+  .role-toggle {
+    display: flex; background: var(--bg); border: 1px solid var(--border);
+    border-radius: 999px; padding: 3px;
+  }
+  .role-toggle button {
+    padding: 6px 12px; border-radius: 999px;
+    font-size: 12px; font-weight: 600; color: var(--text-muted);
+    transition: all 0.15s;
+  }
+  .role-toggle button.active {
+    background: var(--surface); color: var(--text);
+    box-shadow: var(--shadow-sm);
+  }
+  .avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg, #E91C24, #7739D9);
+    display: grid; place-items: center;
+    color: white; font-weight: 600; font-size: 12px;
+  }
+
+  .main { display: grid; grid-template-columns: 300px 1fr; overflow: hidden; }
+
+  /* Sidebar */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  .sidebar-header {
+    padding: 16px 16px 8px;
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .sidebar-title {
+    font-size: 11px; font-weight: 700; text-transform: uppercase;
+    color: var(--text-subtle); letter-spacing: 0.05em;
+  }
+  .icon-btn {
+    width: 24px; height: 24px; border-radius: 6px;
+    display: grid; place-items: center;
+    color: var(--text-muted); transition: all 0.15s;
+  }
+  .icon-btn:hover { background: var(--bg); color: var(--text); }
+  .icon-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .icon-btn.primary {
+    background: linear-gradient(135deg, #E91C24 0%, #7739D9 100%);
+    color: white;
+    box-shadow: 0 1px 2px rgba(233,28,36,0.2), 0 2px 4px rgba(119,57,217,0.15);
+  }
+  .icon-btn.primary:hover {
+    background: linear-gradient(135deg, #c01820 0%, #5f29b8 100%);
+    box-shadow: 0 2px 4px rgba(233,28,36,0.3), 0 3px 8px rgba(119,57,217,0.25);
+  }
+
+  .tree { flex: 1; overflow-y: auto; padding: 4px 8px; }
+
+  .tree-row {
+    display: flex; align-items: center; gap: 6px;
+    padding: 7px 10px; border-radius: 6px;
+    cursor: pointer; user-select: none;
+    color: var(--text); margin-bottom: 1px;
+    position: relative;
+  }
+  .tree-row:hover { background: var(--bg); }
+  .tree-row:hover .tree-row-actions { opacity: 1; }
+  .tree-row.active {
+    background: var(--primary-soft); color: var(--primary); font-weight: 600;
+  }
+  .tree-row-actions {
+    opacity: 0; transition: opacity 0.15s;
+    display: flex; gap: 2px;
+  }
+  .tree-row-actions .icon-btn { width: 20px; height: 20px; }
+  .tree-row-actions .icon-btn svg { width: 12px; height: 12px; }
+
+  .chevron-wrap {
+    width: 14px; height: 14px;
+    display: grid; place-items: center;
+    color: var(--text-subtle); transition: transform 0.15s;
+    flex-shrink: 0;
+  }
+  .chevron-wrap.expanded { transform: rotate(90deg); }
+  .row-icon { color: var(--text-subtle); flex-shrink: 0; display: grid; place-items: center; }
+  .tree-row.active .row-icon { color: var(--primary); }
+  .row-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row-count {
+    font-size: 11px; color: var(--text-subtle);
+    background: var(--bg); padding: 1px 6px; border-radius: 10px;
+  }
+  .tree-row.active .row-count { background: white; color: var(--primary); }
+
+  .tree-children { margin-left: 14px; border-left: 1px solid var(--border); padding-left: 4px; }
+  .tree-row.depth-2 { padding-left: 8px; }
+  .tree-row.agent { padding: 6px 10px; font-size: 13px; color: var(--text-muted); }
+  .tree-row.agent.active { color: var(--primary); }
+  .tree-row.agent:hover { color: var(--text); }
+  .agent-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-subtle); flex-shrink: 0; }
+  .agent-dot.prod { background: var(--success); }
+
+  .empty-children {
+    padding: 4px 12px;
+    font-size: 11px; color: var(--text-subtle); font-style: italic;
+  }
+
+  .sidebar-footer {
+    border-top: 1px solid var(--border);
+    padding: 12px 16px; font-size: 12px; color: var(--text-muted);
+  }
+
+  /* Content area */
+  .content { display: flex; flex-direction: column; overflow: hidden; }
+  .content-header {
+    padding: 14px 24px; background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  .breadcrumb {
+    display: flex; align-items: center; gap: 6px;
+    color: var(--text-muted); font-size: 13px;
+  }
+  .breadcrumb .crumb { cursor: pointer; }
+  .breadcrumb .crumb:hover { color: var(--text); text-decoration: underline; }
+  .breadcrumb .current { color: var(--text); font-weight: 600; }
+  .breadcrumb-sep { color: var(--text-subtle); }
+  .content-header-spacer { flex: 1; }
+
+  .tabs {
+    display: flex; gap: 4px; background: var(--surface);
+    padding: 0 24px; border-bottom: 1px solid var(--border);
+  }
+  .tab {
+    padding: 10px 14px; font-size: 13px; font-weight: 500;
+    color: var(--text-muted); border-bottom: 2px solid transparent;
+    margin-bottom: -1px; transition: all 0.15s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+
+  .content-body { flex: 1; overflow: auto; padding: 24px; }
+  .content-body.canvas-mode { padding: 0; overflow: hidden; position: relative; }
+
+  /* Buttons */
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; border-radius: 6px;
+    font-size: 13px; font-weight: 500;
+    transition: all 0.15s; border: 1px solid transparent;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #E91C24 0%, #7739D9 100%);
+    color: white;
+    box-shadow: 0 1px 2px rgba(233,28,36,0.18), 0 2px 6px rgba(119,57,217,0.18);
+  }
+  .btn-primary:hover {
+    background: linear-gradient(135deg, #c01820 0%, #5f29b8 100%);
+    box-shadow: 0 2px 4px rgba(233,28,36,0.25), 0 4px 10px rgba(119,57,217,0.25);
+  }
+  .btn-primary:active { transform: translateY(1px); }
+  .btn-secondary { background: var(--surface); color: var(--text); border-color: var(--border); }
+  .btn-secondary:hover { background: var(--bg); border-color: var(--border-strong); }
+  .btn-success { background: var(--success); color: white; }
+  .btn-success:hover { background: #059669; }
+  .btn-ghost { color: var(--text-muted); }
+  .btn-ghost:hover { background: var(--bg); color: var(--text); }
+  .btn-danger { color: var(--danger); }
+  .btn-danger:hover { background: var(--danger-soft); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-sm { padding: 5px 10px; font-size: 12px; }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .card-header {
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .card-title { font-size: 14px; font-weight: 600; }
+  .card-body { padding: 20px; }
+
+  /* Project / Agent grid */
+  .grid-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .item-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 16px; cursor: pointer;
+    transition: all 0.15s; position: relative;
+  }
+  .item-card:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-md); transform: translateY(-1px);
+  }
+  .item-avatar {
+    width: 36px; height: 36px; border-radius: 8px;
+    display: grid; place-items: center;
+    color: white; font-weight: 700; font-size: 14px; flex-shrink: 0;
+  }
+  .item-card-info { margin-left: 48px; margin-top: -36px; padding-bottom: 12px; min-height: 36px; }
+  .item-name { font-weight: 600; margin: 0 0 2px; }
+  .item-desc {
+    font-size: 12px; color: var(--text-muted); margin: 0; line-height: 1.5;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .item-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 12px;
+    font-size: 11px; font-weight: 600;
+    background: var(--bg); color: var(--text-muted);
+  }
+  .badge.prod { background: var(--success-soft); color: var(--success); }
+  .badge.draft { background: var(--warning-soft); color: var(--warning); }
+  .badge.version { background: var(--purple-soft); color: var(--purple); }
+  .badge.skill { background: var(--purple-soft); color: var(--purple); }
+  .badge.mcp { background: var(--teal-soft); color: var(--teal); }
+
+  /* Agent detail */
+  .detail-layout {
+    display: grid; grid-template-columns: 1fr 360px; gap: 20px; max-width: 1280px;
+  }
+  .detail-main { display: flex; flex-direction: column; gap: 16px; }
+  .detail-side { display: flex; flex-direction: column; gap: 16px; }
+
+  .form-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+  .form-row:last-child { margin-bottom: 0; }
+  .form-label { font-size: 12px; font-weight: 600; color: var(--text); }
+  .form-hint { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+  .input, .textarea, .select {
+    width: 100%; padding: 8px 12px;
+    border: 1px solid var(--border); border-radius: 6px;
+    background: var(--surface);
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .input:focus, .textarea:focus, .select:focus {
+    outline: none; border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-soft);
+  }
+  .textarea {
+    min-height: 100px; resize: vertical;
+    font-family: ui-monospace, SF Mono, Monaco, Consolas, monospace;
+    font-size: 12px; line-height: 1.6;
+  }
+  .slider-row { display: grid; grid-template-columns: 1fr 50px; align-items: center; gap: 12px; }
+  .slider {
+    width: 100%; -webkit-appearance: none; appearance: none;
+    height: 4px; background: var(--border); border-radius: 2px; outline: none;
+  }
+  .slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 16px; height: 16px;
+    border-radius: 50%; background: var(--primary); cursor: pointer;
+    border: 2px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .slider::-moz-range-thumb {
+    width: 16px; height: 16px; border-radius: 50%;
+    background: var(--primary); cursor: pointer; border: 2px solid white;
+  }
+  .slider-value {
+    font-family: ui-monospace, monospace; font-size: 13px;
+    font-weight: 600; text-align: right; color: var(--primary);
+  }
+
+  /* Toggle switch */
+  .toggle-row {
+    display: flex; align-items: flex-start; gap: 12px;
+    padding: 14px; border: 1px solid var(--border);
+    border-radius: 10px; margin-bottom: 10px;
+    transition: all 0.15s;
+  }
+  .toggle-row.required { border-color: var(--warning); background: var(--warning-soft); }
+  .toggle-row.required.on { border-color: var(--success); background: var(--success-soft); }
+  .toggle-row.on { border-color: var(--primary); background: var(--primary-soft); }
+  .toggle-info { flex: 1; }
+  .toggle-title {
+    font-weight: 600; font-size: 13px; color: var(--text);
+    display: flex; align-items: center; gap: 6px;
+  }
+  .toggle-desc { font-size: 12px; color: var(--text-muted); margin-top: 3px; line-height: 1.5; }
+  .toggle-required-tag {
+    font-size: 10px; font-weight: 700; padding: 1px 6px;
+    background: var(--warning); color: white;
+    border-radius: 10px; text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .switch {
+    position: relative; width: 36px; height: 22px;
+    flex-shrink: 0; margin-top: 2px;
+  }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch-slider {
+    position: absolute; cursor: pointer; inset: 0;
+    background: var(--border-strong); border-radius: 999px;
+    transition: 0.2s;
+  }
+  .switch-slider:before {
+    position: absolute; content: ""; height: 16px; width: 16px;
+    left: 3px; top: 3px; background: white;
+    border-radius: 50%; transition: 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .switch input:checked + .switch-slider { background: var(--primary); }
+  .switch input:checked + .switch-slider:before { transform: translateX(14px); }
+  .switch.required input:checked + .switch-slider { background: var(--success); }
+
+  /* Version list */
+  .version-list { display: flex; flex-direction: column; gap: 8px; }
+  .version-item {
+    padding: 12px; border: 1px solid var(--border); border-radius: 8px;
+    display: flex; align-items: center; gap: 12px;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .version-item:hover { border-color: var(--border-strong); background: var(--surface-2); }
+  .version-item.active { border-color: var(--primary); background: var(--primary-soft); }
+  .version-num {
+    font-family: ui-monospace, monospace; font-weight: 700; font-size: 12px;
+    padding: 3px 8px; background: var(--bg); border-radius: 4px; color: var(--text);
+  }
+  .version-item.active .version-num { background: white; color: var(--primary); }
+  .version-info { flex: 1; min-width: 0; }
+  .version-msg { font-size: 13px; }
+  .version-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  /* Canvas */
+  .canvas-toolbar {
+    position: absolute; top: 16px; left: 16px; z-index: 10;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; box-shadow: var(--shadow-md);
+    padding: 6px; display: flex; gap: 4px;
+  }
+  .canvas-toolbar button {
+    width: 32px; height: 32px; border-radius: 6px;
+    display: grid; place-items: center; color: var(--text-muted);
+  }
+  .canvas-toolbar button:hover { background: var(--bg); color: var(--text); }
+  .canvas-toolbar button.active { background: var(--primary-soft); color: var(--primary); }
+  .canvas-divider { width: 1px; background: var(--border); margin: 4px 2px; }
+
+  .add-node-bar {
+    position: absolute; top: 16px; right: 16px; z-index: 10;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; box-shadow: var(--shadow-md);
+    padding: 6px; display: flex; gap: 4px;
+  }
+  .add-node-bar button {
+    padding: 6px 10px; border-radius: 6px;
+    font-size: 12px; font-weight: 500;
+    display: inline-flex; align-items: center; gap: 5px;
+    color: var(--text);
+  }
+  .add-node-bar button:hover { background: var(--bg); }
+  .add-node-bar .agent-btn { color: var(--primary); }
+  .add-node-bar .skill-btn { color: var(--purple); }
+  .add-node-bar .mcp-btn { color: var(--teal); }
+
+  .canvas-hint {
+    position: absolute; bottom: 16px; left: 50%;
+    transform: translateX(-50%); z-index: 10;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 999px; padding: 6px 16px;
+    box-shadow: var(--shadow-md);
+    font-size: 12px; color: var(--text-muted);
+  }
+  .canvas-hint kbd {
+    background: var(--bg); border: 1px solid var(--border);
+    padding: 1px 6px; border-radius: 4px;
+    font-family: ui-monospace, monospace; font-size: 11px; margin: 0 2px;
+  }
+
+  .canvas {
+    width: 100%; height: 100%;
+    background: radial-gradient(circle, #d6d2dc 1px, transparent 1px);
+    background-size: 20px 20px;
+    background-color: var(--surface-2);
+    position: relative; overflow: hidden; cursor: grab;
+  }
+  .canvas.panning { cursor: grabbing; }
+  .canvas-inner { position: absolute; top: 0; left: 0; transform-origin: 0 0; }
+
+  .canvas-node {
+    position: absolute; width: 200px;
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 10px; padding: 10px 12px;
+    box-shadow: var(--shadow-sm);
+    cursor: grab; user-select: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+  .canvas-node:hover { border-color: var(--border-strong); box-shadow: var(--shadow-md); }
+  .canvas-node.selected { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+  .canvas-node.agent.prod { border-color: var(--success); }
+  .canvas-node.agent.prod.selected { box-shadow: 0 0 0 3px var(--success-soft); }
+  .canvas-node.skill { border-color: var(--purple); background: linear-gradient(180deg, #fcfaff, #ffffff); }
+  .canvas-node.skill.selected { box-shadow: 0 0 0 3px var(--purple-soft); }
+  .canvas-node.mcp { border-color: var(--teal); background: linear-gradient(180deg, #f7fdfb, #ffffff); }
+  .canvas-node.mcp.selected { box-shadow: 0 0 0 3px var(--teal-soft); }
+
+  .canvas-node-header { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+  .canvas-node-avatar {
+    width: 24px; height: 24px; border-radius: 6px;
+    display: grid; place-items: center;
+    color: white; font-weight: 700; font-size: 11px; flex-shrink: 0;
+  }
+  .canvas-node-avatar.skill { background: linear-gradient(135deg, #7739D9, #9b5cf0); }
+  .canvas-node-avatar.mcp { background: linear-gradient(135deg, #0d9488, #06b6d4); }
+  .canvas-node-name {
+    font-weight: 600; font-size: 12px;
+    flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .canvas-node-type {
+    font-size: 9px; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--text-subtle);
+  }
+  .canvas-node-meta {
+    font-size: 10px; color: var(--text-muted);
+    display: flex; gap: 6px; align-items: center;
+  }
+  .canvas-node-delete {
+    position: absolute; top: -8px; right: -8px;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--danger); display: none;
+    align-items: center; justify-content: center; cursor: pointer;
+    box-shadow: var(--shadow-sm); z-index: 3;
+  }
+  .canvas-node.selected .canvas-node-delete { display: flex; }
+  .canvas-node-delete:hover { background: var(--danger); color: white; }
+
+  .canvas-port {
+    position: absolute; width: 12px; height: 12px;
+    background: white; border: 2px solid var(--primary);
+    border-radius: 50%; cursor: crosshair; z-index: 2;
+    transition: transform 0.15s;
+  }
+  .canvas-node.skill .canvas-port { border-color: var(--purple); }
+  .canvas-node.mcp .canvas-port { border-color: var(--teal); }
+  .canvas-port:hover { transform: scale(1.3); background: currentColor; }
+  .canvas-port.input { left: -7px; top: 50%; transform: translateY(-50%); }
+  .canvas-port.input:hover { transform: translateY(-50%) scale(1.3); }
+  .canvas-port.output { right: -7px; top: 50%; transform: translateY(-50%); }
+  .canvas-port.output:hover { transform: translateY(-50%) scale(1.3); }
+  .canvas-svg {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; overflow: visible;
+  }
+  .connection-line {
+    stroke: var(--primary); stroke-width: 2; fill: none;
+    pointer-events: stroke; cursor: pointer;
+  }
+  .connection-line:hover { stroke-width: 3; }
+  .connection-line.temp { stroke-dasharray: 4 4; opacity: 0.6; }
+
+  /* Modal */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(16,24,40,0.4); z-index: 100;
+    display: flex; align-items: center; justify-content: center;
+    animation: fadeIn 0.15s;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .modal {
+    background: var(--surface); border-radius: 12px;
+    box-shadow: var(--shadow-lg);
+    width: 500px; max-width: 90vw; max-height: 90vh;
+    overflow: hidden; display: flex; flex-direction: column;
+    animation: slideUp 0.2s;
+  }
+  @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .modal-header {
+    padding: 18px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-title { font-weight: 600; font-size: 15px; }
+  .modal-body { padding: 20px; overflow-y: auto; }
+  .modal-footer {
+    padding: 14px 20px; border-top: 1px solid var(--border);
+    background: var(--surface-2);
+    display: flex; justify-content: flex-end; gap: 8px;
+  }
+  .modal-intro {
+    font-size: 13px; color: var(--text-muted);
+    margin-bottom: 16px; line-height: 1.6;
+  }
+
+  .modal-picker-list { display: flex; flex-direction: column; gap: 6px; max-height: 360px; overflow-y: auto; }
+  .modal-picker-item {
+    padding: 12px; border: 1px solid var(--border); border-radius: 8px;
+    cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; gap: 12px;
+  }
+  .modal-picker-item:hover { border-color: var(--border-strong); background: var(--surface-2); }
+  .modal-picker-item.selected { border-color: var(--primary); background: var(--primary-soft); }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; z-index: 200;
+    background: var(--text); color: white;
+    padding: 12px 18px; border-radius: 8px;
+    box-shadow: var(--shadow-lg); font-size: 13px;
+    display: flex; align-items: center; gap: 8px;
+    animation: slideInRight 0.2s;
+  }
+  @keyframes slideInRight { from { transform: translateX(20px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+  .toast.success { background: var(--success); }
+  .toast.error { background: var(--danger); }
+
+  .empty { text-align: center; padding: 60px 20px; color: var(--text-muted); }
+  .empty-icon { font-size: 36px; margin-bottom: 12px; opacity: 0.5; }
+  .empty-title { font-weight: 600; color: var(--text); margin-bottom: 4px; }
+
+  .user-list { display: flex; flex-direction: column; gap: 6px; }
+  .user-row { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 6px; }
+  .user-row:hover { background: var(--surface-2); }
+  .user-avatar-sm {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: grid; place-items: center;
+    color: white; font-weight: 600; font-size: 11px;
+  }
+  .user-name { flex: 1; font-size: 13px; }
+  .user-role { font-size: 11px; color: var(--text-muted); }
+
+  .admin-only-locked {
+    background: var(--warning-soft); border: 1px solid #fde68a;
+    border-radius: 8px; padding: 10px 14px;
+    font-size: 12px; color: #92400e;
+    display: flex; align-items: center; gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .icon { display: inline-block; vertical-align: middle; }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+/* ============================================================
+   EAP — Agent Platform Prototype
+   Hierarchy: Workspace → Folder → Project → Agent
+   ============================================================ */
+
+const ICON = {
+  chevron: '<svg class="icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>',
+  folder: '<svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>',
+  folderOpen: '<svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.45-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.55 6a2 2 0 0 1-1.94 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H18a2 2 0 0 1 2 2v2"/></svg>',
+  project: '<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 7l10-5 10 5-10 5L2 7z"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>',
+  plus: '<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>',
+  bot: '<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><circle cx="12" cy="5" r="2"/><path d="M12 7v4"/><line x1="8" y1="16" x2="8" y2="16"/><line x1="16" y1="16" x2="16" y2="16"/></svg>',
+  sparkle: '<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M5.6 18.4l2.1-2.1M16.3 7.7l2.1-2.1"/></svg>',
+  plug: '<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 2v6"/><path d="M15 2v6"/><path d="M6 8h12v4a6 6 0 0 1-12 0V8z"/><path d="M12 18v4"/></svg>',
+  users: '<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  shield: '<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>',
+  rocket: '<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>',
+  x: '<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+  check: '<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+  copy: '<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+  history: '<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg>',
+  link: '<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+  zoomIn: '<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>',
+  zoomOut: '<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>',
+  fit: '<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="3" y1="21" x2="10" y2="14"/></svg>',
+  trash: '<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-2 14a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>',
+  lock: '<svg class="icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>',
+};
+
+const AGENT_COLORS = [
+  ['#E91C24', '#7739D9'],   // red → purple (brand)
+  ['#7739D9', '#3b1e6b'],   // purple deep
+  ['#E91C24', '#8b0000'],   // red deep
+  ['#1e1b4b', '#7739D9'],   // navy → purple
+  ['#7739D9', '#E91C24'],   // purple → red
+  ['#E91C24', '#f97316'],   // red → orange accent
+  ['#0d9488', '#7739D9'],   // teal → purple
+];
+function colorFor(seed) {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) | 0;
+  return AGENT_COLORS[Math.abs(h) % AGENT_COLORS.length];
+}
+function avatarBg(seed) { const [a, b] = colorFor(seed); return `linear-gradient(135deg, ${a}, ${b})`; }
+function initials(name) { return name.split(/\s+/).slice(0, 2).map(s => s[0] || '').join('').toUpperCase(); }
+
+// ===== Skill / MCP catalog =====
+const SKILL_CATALOG = [
+  { id: 'sk-classify', name: 'Classify', desc: 'Categorize text into predefined buckets' },
+  { id: 'sk-summarize', name: 'Summarize', desc: 'Condense long text into key points' },
+  { id: 'sk-extract', name: 'Extract entities', desc: 'Pull names, dates, amounts, etc.' },
+  { id: 'sk-translate', name: 'Translate', desc: 'Multi-language translation' },
+  { id: 'sk-sentiment', name: 'Sentiment', desc: 'Detect tone and emotion' },
+  { id: 'sk-redact', name: 'Redact PII', desc: 'Remove personally identifiable info' },
+];
+const MCP_CATALOG = [
+  { id: 'mcp-slack', name: 'Slack', desc: 'Send messages, read channels' },
+  { id: 'mcp-salesforce', name: 'Salesforce', desc: 'CRM records, opportunities' },
+  { id: 'mcp-outlook', name: 'Outlook', desc: 'Send and read email' },
+  { id: 'mcp-workday', name: 'Workday', desc: 'HR records and approvals' },
+  { id: 'mcp-sailpoint', name: 'SailPoint', desc: 'Identity governance & access' },
+  { id: 'mcp-servicenow', name: 'ServiceNow', desc: 'Tickets, requests, CMDB' },
+  { id: 'mcp-confluence', name: 'Confluence', desc: 'Knowledge base pages' },
+  { id: 'mcp-gdrive', name: 'Google Drive', desc: 'Docs, sheets, search' },
+  { id: 'mcp-snowflake', name: 'Snowflake', desc: 'Data warehouse queries' },
+  { id: 'mcp-zendesk', name: 'Zendesk', desc: 'Tickets, customer profiles' },
+];
+
+// ===== State =====
+let state = {
+  role: 'admin',
+  currentUser: { id: 'u-nick', name: 'Nick K.', email: 'nicholaskaroutsos@gmail.com' },
+  selectedFolderId: 'f-cs',
+  selectedProjectId: 'p-opm',
+  selectedAgentId: null,
+  activeTab: 'projects',
+  expandedFolders: new Set(['f-cs']),
+  expandedProjects: new Set(['p-opm']),
+  folders: [
+    {
+      id: 'f-cs', name: 'Customer Support', color: '#E91C24',
+      users: [
+        { id: 'u-nick', name: 'Nick Karoutsos', role: 'Admin' },
+        { id: 'u-mira', name: 'Mira Chen', role: 'Editor' },
+        { id: 'u-jamal', name: 'Jamal Reid', role: 'Viewer' },
+      ],
+    },
+    {
+      id: 'f-people', name: 'People Team', color: '#10b981',
+      users: [
+        { id: 'u-nick', name: 'Nick Karoutsos', role: 'Admin' },
+        { id: 'u-aisha', name: 'Aisha Khan', role: 'Editor' },
+        { id: 'u-rahul', name: 'Rahul Singh', role: 'Editor' },
+      ],
+    },
+    {
+      id: 'f-dio', name: 'DIO', color: '#7739D9',
+      users: [
+        { id: 'u-nick', name: 'Nick Karoutsos', role: 'Admin' },
+        { id: 'u-marcus', name: 'Marcus Webb', role: 'Editor' },
+        { id: 'u-elena', name: 'Elena Rossi', role: 'Editor' },
+      ],
+    },
+    {
+      id: 'f-ops', name: 'Operations', color: '#0d9488',
+      users: [
+        { id: 'u-nick', name: 'Nick Karoutsos', role: 'Admin' },
+        { id: 'u-sam', name: 'Sam Park', role: 'Editor' },
+        { id: 'u-bea', name: 'Beatrice Hwang', role: 'Editor' },
+      ],
+    },
+  ],
+  projects: [
+    // ----- Customer Support -----
+    {
+      id: 'p-opm', folderId: 'f-cs',
+      name: 'Outbound Prospect Management',
+      description: 'Score leads, research accounts, draft personalized outbound, and predict engagement.',
+      skillNodes: [
+        { id: 'sn-redact', skillId: 'sk-redact', position: { x: 80, y: 320 } },
+      ],
+      mcpNodes: [
+        { id: 'mn-sf', mcpId: 'mcp-salesforce', position: { x: 80, y: 60 } },
+        { id: 'mn-outlook', mcpId: 'mcp-outlook', position: { x: 1020, y: 60 } },
+        { id: 'mn-slack', mcpId: 'mcp-slack', position: { x: 1020, y: 280 } },
+      ],
+      connections: [
+        { id: 'c1', from: 'a-lead-score', to: 'a-prospect-research' },
+        { id: 'c2', from: 'a-prospect-research', to: 'a-email-draft' },
+        { id: 'c3', from: 'a-prospect-research', to: 'a-engage-predict' },
+        { id: 'c4', from: 'mn-sf', to: 'a-lead-score' },
+        { id: 'c5', from: 'sn-redact', to: 'a-prospect-research' },
+        { id: 'c6', from: 'a-email-draft', to: 'mn-outlook' },
+        { id: 'c7', from: 'a-engage-predict', to: 'mn-slack' },
+      ],
+    },
+    {
+      id: 'p-mi', folderId: 'f-cs',
+      name: 'Market Intelligence',
+      description: 'Track competitor activity, news, and market signals relevant to active accounts.',
+      skillNodes: [],
+      mcpNodes: [
+        { id: 'mn-mi-gdrive', mcpId: 'mcp-gdrive', position: { x: 480, y: 80 } },
+      ],
+      connections: [
+        { id: 'c-mi-1', from: 'a-competitor-watch', to: 'mn-mi-gdrive' },
+      ],
+    },
+    {
+      id: 'p-gccx', folderId: 'f-cs',
+      name: 'GCCX',
+      description: 'Global Contact Center Experience — agent assist and quality monitoring for support.',
+      skillNodes: [], mcpNodes: [], connections: [],
+    },
+    // ----- People Team -----
+    {
+      id: 'p-workday', folderId: 'f-people',
+      name: 'Workday Approvals',
+      description: 'Route, validate, and approve PTO, expenses, and job change requests in Workday.',
+      skillNodes: [],
+      mcpNodes: [
+        { id: 'mn-wd', mcpId: 'mcp-workday', position: { x: 540, y: 80 } },
+      ],
+      connections: [
+        { id: 'c-wd-1', from: 'a-pto-approve', to: 'mn-wd' },
+        { id: 'c-wd-2', from: 'a-expense-review', to: 'mn-wd' },
+      ],
+    },
+    {
+      id: 'p-hr', folderId: 'f-people',
+      name: 'HR Processes',
+      description: 'Answer policy questions, onboard new hires, and guide employees through standard HR workflows.',
+      skillNodes: [], mcpNodes: [], connections: [],
+    },
+    {
+      id: 'p-er', folderId: 'f-people',
+      name: 'Employee Relations',
+      description: 'Intake and triage of employee relations cases with sentiment monitoring.',
+      skillNodes: [], mcpNodes: [], connections: [],
+    },
+    // ----- DIO -----
+    {
+      id: 'p-km', folderId: 'f-dio',
+      name: 'Knowledge Management',
+      description: 'Index, summarize, and answer questions against internal documentation and runbooks.',
+      skillNodes: [],
+      mcpNodes: [
+        { id: 'mn-km-conf', mcpId: 'mcp-confluence', position: { x: 100, y: 80 } },
+      ],
+      connections: [
+        { id: 'c-km-1', from: 'mn-km-conf', to: 'a-doc-index' },
+        { id: 'c-km-2', from: 'a-doc-index', to: 'a-faq-respond' },
+      ],
+    },
+    {
+      id: 'p-sp', folderId: 'f-dio',
+      name: 'Sailpoint',
+      description: 'Identity governance — quarterly access reviews and least-privilege recommendations.',
+      skillNodes: [],
+      mcpNodes: [
+        { id: 'mn-sp', mcpId: 'mcp-sailpoint', position: { x: 480, y: 80 } },
+      ],
+      connections: [
+        { id: 'c-sp-1', from: 'a-access-review', to: 'mn-sp' },
+      ],
+    },
+    // ----- Operations -----
+    {
+      id: 'p-vision', folderId: 'f-ops',
+      name: 'Vision',
+      description: 'Visual inspection of products on the line — defect detection and root-cause hints.',
+      skillNodes: [], mcpNodes: [], connections: [],
+    },
+    {
+      id: 'p-cap', folderId: 'f-ops',
+      name: 'Capacity Management',
+      description: 'Forecast capacity needs across teams and regions, flag bottlenecks before they hit.',
+      skillNodes: [],
+      mcpNodes: [
+        { id: 'mn-cap-sf', mcpId: 'mcp-snowflake', position: { x: 100, y: 80 } },
+      ],
+      connections: [
+        { id: 'c-cap-1', from: 'mn-cap-sf', to: 'a-capacity-forecast' },
+      ],
+    },
+  ],
+  agents: [
+    // ----- Outbound Prospect Management (showcase flow) -----
+    {
+      id: 'a-lead-score', projectId: 'p-opm', name: 'Lead Scorer',
+      description: 'Scores inbound and outbound leads based on firmographics, engagement, and intent signals.',
+      productionVersionId: 'v-ls-3', activeVersionId: 'v-ls-4',
+      versions: [
+        { id: 'v-ls-1', label: 'v1', message: 'Initial draft', author: 'Nick K.', createdAt: '2026-03-04', model: 'claude-sonnet-4-6', temperature: 0.7, maxTokens: 1024, topP: 1, systemPrompt: 'Score a lead from 0–100 based on the data provided.', tools: ['classify'] },
+        { id: 'v-ls-2', label: 'v2', message: 'Add intent signal weighting', author: 'Mira C.', createdAt: '2026-03-12', model: 'claude-sonnet-4-6', temperature: 0.4, maxTokens: 1024, topP: 1, systemPrompt: 'Score a lead 0–100.\n\nWeights:\n- Firmographic fit: 40%\n- Engagement: 30%\n- Intent signals: 30%', tools: ['classify','route'] },
+        { id: 'v-ls-3', label: 'v3', message: 'Production cut — calibrated thresholds', author: 'Nick K.', createdAt: '2026-04-02', model: 'claude-sonnet-4-6', temperature: 0.3, maxTokens: 1024, topP: 1, systemPrompt: 'Score a lead 0–100 with calibrated weights.\n\nReturn JSON: {score, tier (A/B/C/D), reasoning}.', tools: ['classify','route'] },
+        { id: 'v-ls-4', label: 'v4', message: 'Experiment — tighter temp, return rationale', author: 'Mira C.', createdAt: '2026-05-08', model: 'claude-opus-4-6', temperature: 0.2, maxTokens: 2048, topP: 0.95, systemPrompt: 'Score a lead 0–100 with calibrated weights.\n\nReturn JSON: {score, tier, rationale, recommended_play}.', tools: ['classify','route','crm_lookup'] },
+      ],
+      position: { x: 320, y: 80 },
+    },
+    {
+      id: 'a-prospect-research', projectId: 'p-opm', name: 'Prospect Researcher',
+      description: 'Pulls account context, recent news, and key stakeholder bios for outbound prep.',
+      productionVersionId: 'v-pr-2', activeVersionId: 'v-pr-2',
+      versions: [
+        { id: 'v-pr-1', label: 'v1', message: 'Initial', author: 'Jamal R.', createdAt: '2026-03-20', model: 'claude-haiku-4-5', temperature: 0.5, maxTokens: 1024, topP: 1, systemPrompt: 'Research a prospect company in 5 bullets.', tools: ['web_search'] },
+        { id: 'v-pr-2', label: 'v2', message: 'Add stakeholder section', author: 'Mira C.', createdAt: '2026-04-18', model: 'claude-haiku-4-5', temperature: 0.4, maxTokens: 1600, topP: 1, systemPrompt: 'Research a prospect company.\n\nFormat:\n- Company snapshot:\n- Recent news (last 90d):\n- Tech stack signals:\n- Key stakeholders:\n- Suggested angle:', tools: ['web_search','crm_lookup'] },
+      ],
+      position: { x: 580, y: 60 },
+    },
+    {
+      id: 'a-email-draft', projectId: 'p-opm', name: 'Email Drafter',
+      description: 'Drafts a personalized first-touch outbound email using the researcher\'s output.',
+      productionVersionId: null, activeVersionId: 'v-ed-1',
+      versions: [
+        { id: 'v-ed-1', label: 'v1', message: 'Draft', author: 'Nick K.', createdAt: '2026-05-09', model: 'claude-sonnet-4-6', temperature: 0.8, maxTokens: 1024, topP: 1, systemPrompt: 'Write a warm, specific outbound email. 4 short paragraphs. Always reference something from the research, never use stock openers.', tools: ['knowledge_search'] },
+      ],
+      position: { x: 810, y: 60 },
+    },
+    {
+      id: 'a-engage-predict', projectId: 'p-opm', name: 'Engagement Predictor',
+      description: 'Predicts likelihood of a reply within 5 business days and flags risk factors.',
+      productionVersionId: null, activeVersionId: 'v-ep-1',
+      versions: [
+        { id: 'v-ep-1', label: 'v1', message: 'Prototype', author: 'Jamal R.', createdAt: '2026-05-11', model: 'claude-haiku-4-5', temperature: 0.1, maxTokens: 256, topP: 1, systemPrompt: 'Return JSON: {reply_likelihood: 0..1, risk_factors: [], best_send_window}.', tools: [] },
+      ],
+      position: { x: 810, y: 260 },
+    },
+    // ----- Market Intelligence -----
+    {
+      id: 'a-competitor-watch', projectId: 'p-mi', name: 'Competitor Watcher',
+      description: 'Daily digest of competitor product launches, hires, and pricing moves.',
+      productionVersionId: 'v-cw-1', activeVersionId: 'v-cw-1',
+      versions: [
+        { id: 'v-cw-1', label: 'v1', message: 'Initial', author: 'Mira C.', createdAt: '2026-04-10', model: 'claude-sonnet-4-6', temperature: 0.4, maxTokens: 2048, topP: 1, systemPrompt: 'Summarize the day\'s competitor activity. Bucket by company, then by event type.', tools: ['web_search'] },
+      ],
+      position: { x: 140, y: 80 },
+    },
+    // ----- Workday Approvals -----
+    {
+      id: 'a-pto-approve', projectId: 'p-workday', name: 'PTO Approver',
+      description: 'Reviews PTO requests against team coverage and policy, recommends approve/deny.',
+      productionVersionId: 'v-pto-1', activeVersionId: 'v-pto-1',
+      versions: [
+        { id: 'v-pto-1', label: 'v1', message: 'Initial', author: 'Aisha K.', createdAt: '2026-04-15', model: 'claude-sonnet-4-6', temperature: 0.2, maxTokens: 1024, topP: 1, systemPrompt: 'Evaluate a PTO request. Check policy minimums and team coverage. Return {recommendation, rationale, conflicts}.', tools: ['classify'] },
+      ],
+      position: { x: 100, y: 60 },
+    },
+    {
+      id: 'a-expense-review', projectId: 'p-workday', name: 'Expense Reviewer',
+      description: 'Reviews expense reports against policy, flags exceptions, and routes for approval.',
+      productionVersionId: null, activeVersionId: 'v-er-1',
+      versions: [
+        { id: 'v-er-1', label: 'v1', message: 'Initial', author: 'Rahul S.', createdAt: '2026-04-22', model: 'claude-sonnet-4-6', temperature: 0.2, maxTokens: 1024, topP: 1, systemPrompt: 'Review an expense report against policy. Flag items over limits or missing receipts.', tools: ['classify'] },
+      ],
+      position: { x: 100, y: 260 },
+    },
+    // ----- HR Processes -----
+    {
+      id: 'a-policy-qa', projectId: 'p-hr', name: 'Policy Q&A',
+      description: 'Answers employee questions about benefits, leave, and HR policy from the handbook.',
+      productionVersionId: 'v-pq-1', activeVersionId: 'v-pq-1',
+      versions: [
+        { id: 'v-pq-1', label: 'v1', message: 'Initial', author: 'Aisha K.', createdAt: '2026-04-12', model: 'claude-haiku-4-5', temperature: 0.3, maxTokens: 1024, topP: 1, systemPrompt: 'Answer HR policy questions. Always cite the section of the handbook.', tools: ['knowledge_search'] },
+      ],
+      position: { x: 120, y: 100 },
+    },
+    // ----- Knowledge Management -----
+    {
+      id: 'a-doc-index', projectId: 'p-km', name: 'Doc Indexer',
+      description: 'Crawls and embeds internal documentation, builds a searchable knowledge graph.',
+      productionVersionId: 'v-di-1', activeVersionId: 'v-di-1',
+      versions: [
+        { id: 'v-di-1', label: 'v1', message: 'Initial', author: 'Marcus W.', createdAt: '2026-03-30', model: 'claude-haiku-4-5', temperature: 0.1, maxTokens: 512, topP: 1, systemPrompt: 'Extract and tag content from internal docs for indexing.', tools: ['classify'] },
+      ],
+      position: { x: 380, y: 80 },
+    },
+    {
+      id: 'a-faq-respond', projectId: 'p-km', name: 'FAQ Responder',
+      description: 'Answers internal questions in Slack using the indexed knowledge base.',
+      productionVersionId: 'v-faq-2', activeVersionId: 'v-faq-2',
+      versions: [
+        { id: 'v-faq-1', label: 'v1', message: 'Initial', author: 'Elena R.', createdAt: '2026-04-04', model: 'claude-haiku-4-5', temperature: 0.4, maxTokens: 1024, topP: 1, systemPrompt: 'Answer internal questions concisely using indexed docs.', tools: ['knowledge_search'] },
+        { id: 'v-faq-2', label: 'v2', message: 'Add citation footnotes', author: 'Marcus W.', createdAt: '2026-04-28', model: 'claude-sonnet-4-6', temperature: 0.3, maxTokens: 1024, topP: 1, systemPrompt: 'Answer internal questions concisely.\n\nAlways cite source documents inline as [doc:title].', tools: ['knowledge_search'] },
+      ],
+      position: { x: 680, y: 80 },
+    },
+    // ----- Sailpoint -----
+    {
+      id: 'a-access-review', projectId: 'p-sp', name: 'Access Reviewer',
+      description: 'Quarterly access certification — flags over-privileged accounts and stale entitlements.',
+      productionVersionId: null, activeVersionId: 'v-ar-1',
+      versions: [
+        { id: 'v-ar-1', label: 'v1', message: 'Prototype', author: 'Marcus W.', createdAt: '2026-05-02', model: 'claude-opus-4-6', temperature: 0.1, maxTokens: 2048, topP: 0.95, systemPrompt: 'Review user entitlements against role norms. Flag anomalies with severity.', tools: ['classify'] },
+      ],
+      position: { x: 140, y: 100 },
+    },
+    // ----- Vision -----
+    {
+      id: 'a-vision-inspect', projectId: 'p-vision', name: 'Vision Inspector',
+      description: 'Inspects line images for defects, returns pass/fail with annotated regions.',
+      productionVersionId: null, activeVersionId: 'v-vi-1',
+      versions: [
+        { id: 'v-vi-1', label: 'v1', message: 'Prototype', author: 'Sam P.', createdAt: '2026-05-05', model: 'claude-opus-4-6', temperature: 0.0, maxTokens: 1024, topP: 1, systemPrompt: 'Inspect product images. Return {pass: bool, defects: [{type, region, confidence}]}.', tools: [] },
+      ],
+      position: { x: 200, y: 100 },
+    },
+    // ----- Capacity Management -----
+    {
+      id: 'a-capacity-forecast', projectId: 'p-cap', name: 'Capacity Forecaster',
+      description: 'Forecasts staffing needs 4–8 weeks out by region and skill type.',
+      productionVersionId: 'v-cf-1', activeVersionId: 'v-cf-1',
+      versions: [
+        { id: 'v-cf-1', label: 'v1', message: 'Initial', author: 'Beatrice H.', createdAt: '2026-04-20', model: 'claude-sonnet-4-6', temperature: 0.3, maxTokens: 2048, topP: 1, systemPrompt: 'Forecast capacity needs from historical demand and current pipeline. Return weekly projections by region.', tools: [] },
+      ],
+      position: { x: 400, y: 80 },
+    },
+  ],
+  canvas: { zoom: 1, panX: 0, panY: 0 },
+  modal: null,
+  toast: null,
+};
+
+const MODELS = [
+  { id: 'claude-opus-4-6', name: 'Claude Opus 4.6', desc: 'Most capable, slower' },
+  { id: 'claude-sonnet-4-6', name: 'Claude Sonnet 4.6', desc: 'Balanced' },
+  { id: 'claude-haiku-4-5', name: 'Claude Haiku 4.5', desc: 'Fastest, lowest cost' },
+];
+
+function uid(prefix) { return prefix + '-' + Math.random().toString(36).slice(2, 8); }
+function $(sel, root) { return (root || document).querySelector(sel); }
+
+function getFolder(id) { return state.folders.find(f => f.id === id); }
+function getProject(id) { return state.projects.find(p => p.id === id); }
+function getAgent(id) { return state.agents.find(a => a.id === id); }
+function getFolderProjects(fid) { return state.projects.filter(p => p.folderId === fid); }
+function getProjectAgents(pid) { return state.agents.filter(a => a.projectId === pid); }
+function getVersion(agent, vid) { return agent.versions.find(v => v.id === vid); }
+function isAdmin() { return state.role === 'admin'; }
+
+function showToast(msg, type) {
+  state.toast = { msg, type: type || 'success' };
+  render();
+  setTimeout(() => { state.toast = null; render(); }, 2500);
+}
+
+/* ============================================================ RENDER ============================================================ */
+function render() {
+  const app = $('#app');
+  app.innerHTML = topbarHTML() + mainHTML();
+  if (state.modal) app.insertAdjacentHTML('beforeend', modalHTML());
+  if (state.toast) app.insertAdjacentHTML('beforeend', toastHTML());
+  attachEvents();
+  if (state.activeTab === 'flow') renderCanvas();
+}
+
+function topbarHTML() {
+  return `
+    <header class="topbar">
+      <div class="logo"><div class="logo-mark">EAP</div><span>EAP</span></div>
+      <div class="topbar-spacer"></div>
+      <div class="topbar-actions">
+        <span style="font-size:12px;color:var(--text-muted);margin-right:4px;">View as:</span>
+        <div class="role-toggle" id="role-toggle">
+          <button data-role="admin" class="${state.role === 'admin' ? 'active' : ''}">${ICON.shield} Admin</button>
+          <button data-role="user" class="${state.role === 'user' ? 'active' : ''}">${ICON.users} Member</button>
+        </div>
+        <div class="avatar" title="${state.currentUser.name}">${initials(state.currentUser.name)}</div>
+      </div>
+    </header>
+  `;
+}
+
+function mainHTML() {
+  return `<div class="main">${sidebarHTML()}${contentHTML()}</div>`;
+}
+
+function sidebarHTML() {
+  const rows = state.folders.map(folder => {
+    const fExpanded = state.expandedFolders.has(folder.id);
+    const projects = getFolderProjects(folder.id);
+    const fActive = state.selectedFolderId === folder.id && !state.selectedProjectId && !state.selectedAgentId ? 'active' : '';
+    return `
+      <div>
+        <div class="tree-row ${fActive}" data-folder="${folder.id}">
+          <span class="chevron-wrap ${fExpanded ? 'expanded' : ''}" data-toggle-folder="${folder.id}">${ICON.chevron}</span>
+          <span class="row-icon">${fExpanded ? ICON.folderOpen : ICON.folder}</span>
+          <span class="row-name">${escapeHtml(folder.name)}</span>
+          <span class="row-count">${projects.length}</span>
+        </div>
+        ${fExpanded ? `
+          <div class="tree-children">
+            ${projects.map(project => {
+              const pExpanded = state.expandedProjects.has(project.id);
+              const agents = getProjectAgents(project.id);
+              const pActive = state.selectedProjectId === project.id && !state.selectedAgentId ? 'active' : '';
+              return `
+                <div>
+                  <div class="tree-row ${pActive}" data-project="${project.id}" data-folder="${folder.id}">
+                    <span class="chevron-wrap ${pExpanded ? 'expanded' : ''}" data-toggle-project="${project.id}">${ICON.chevron}</span>
+                    <span class="row-icon">${ICON.project}</span>
+                    <span class="row-name">${escapeHtml(project.name)}</span>
+                    <span class="row-count">${agents.length}</span>
+                  </div>
+                  ${pExpanded ? `
+                    <div class="tree-children">
+                      ${agents.map(a => {
+                        const aActive = state.selectedAgentId === a.id ? 'active' : '';
+                        const dotClass = a.productionVersionId ? 'prod' : '';
+                        return `
+                          <div class="tree-row agent ${aActive}" data-agent="${a.id}" data-project="${project.id}" data-folder="${folder.id}">
+                            <span class="agent-dot ${dotClass}"></span>
+                            <span class="row-name">${escapeHtml(a.name)}</span>
+                          </div>
+                        `;
+                      }).join('')}
+                      ${agents.length === 0 ? `<div class="empty-children">No agents yet</div>` : ''}
+                    </div>
+                  ` : ''}
+                </div>
+              `;
+            }).join('')}
+            ${projects.length === 0 ? `<div class="empty-children">No projects yet</div>` : ''}
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }).join('');
+
+  const addBtn = isAdmin()
+    ? `<button class="icon-btn primary" id="add-folder-btn" title="New folder">${ICON.plus}</button>`
+    : `<button class="icon-btn" title="Admin only" disabled>${ICON.lock}</button>`;
+
+  return `
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <span class="sidebar-title">Workspace</span>
+        ${addBtn}
+      </div>
+      <div class="tree">${rows}</div>
+      <div class="sidebar-footer">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <div class="avatar" style="width:24px;height:24px;font-size:10px;">${initials(state.currentUser.name)}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(state.currentUser.name)}</div>
+            <div style="font-size:11px;color:var(--text-muted);">${state.role === 'admin' ? 'Workspace Admin' : 'Member'}</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+  `;
+}
+
+function contentHTML() {
+  const folder = getFolder(state.selectedFolderId);
+  if (!folder) return `<section class="content"><div class="empty"><div class="empty-title">Pick something from the workspace</div></div></section>`;
+  const project = state.selectedProjectId ? getProject(state.selectedProjectId) : null;
+  const agent = state.selectedAgentId ? getAgent(state.selectedAgentId) : null;
+
+  // Determine view level
+  const level = agent ? 'agent' : project ? 'project' : 'folder';
+
+  // Breadcrumb
+  const crumbs = [
+    `<span class="crumb" data-crumb-folder="${folder.id}">${escapeHtml(folder.name)}</span>`,
+  ];
+  if (project) crumbs.push(`<span class="breadcrumb-sep">/</span><span class="${agent ? 'crumb' : 'current'}" data-crumb-project="${project.id}">${escapeHtml(project.name)}</span>`);
+  if (agent) crumbs.push(`<span class="breadcrumb-sep">/</span><span class="current">${escapeHtml(agent.name)}</span>`);
+
+  // Tabs depend on level
+  let tabs = [];
+  if (level === 'folder') {
+    tabs = [
+      { id: 'projects', label: 'Projects', count: getFolderProjects(folder.id).length },
+      { id: 'members', label: 'Members', count: folder.users.length },
+    ];
+  } else if (level === 'project') {
+    tabs = [
+      { id: 'agents', label: 'Agents', count: getProjectAgents(project.id).length },
+      { id: 'flow', label: 'Flow', icon: ICON.link },
+    ];
+  }
+
+  // Action button
+  let actionBtn = '';
+  if (level === 'folder') {
+    actionBtn = `<button class="btn btn-primary btn-sm" id="new-project-btn">${ICON.plus} New project</button>`;
+  } else if (level === 'project') {
+    actionBtn = `<button class="btn btn-primary btn-sm" id="new-agent-btn">${ICON.plus} New agent</button>`;
+  } else if (level === 'agent') {
+    actionBtn = `<button class="btn btn-ghost btn-sm" id="back-to-project">← Back to project</button>`;
+  }
+
+  // Body
+  let body, canvasBodyClass = '';
+  if (level === 'agent') {
+    body = agentDetailHTML(agent);
+  } else if (level === 'project') {
+    if (state.activeTab === 'flow') {
+      body = canvasHTML(project);
+      canvasBodyClass = 'canvas-mode';
+    } else {
+      body = agentsListHTML(project);
+    }
+  } else {
+    if (state.activeTab === 'members') body = membersHTML(folder);
+    else body = projectsListHTML(folder);
+  }
+
+  return `
+    <section class="content">
+      <header class="content-header">
+        <div class="breadcrumb">${crumbs.join('')}</div>
+        <div class="content-header-spacer"></div>
+        ${actionBtn}
+      </header>
+      ${level === 'agent' ? '' : `
+        <nav class="tabs">
+          ${tabs.map(t => `
+            <button class="tab ${state.activeTab === t.id ? 'active' : ''}" data-tab="${t.id}">
+              ${t.icon || ''} ${t.label}${t.count !== undefined ? ` <span style="opacity:0.6;">${t.count}</span>` : ''}
+            </button>
+          `).join('')}
+        </nav>
+      `}
+      <div class="content-body ${canvasBodyClass}">${body}</div>
+    </section>
+  `;
+}
+
+function projectsListHTML(folder) {
+  const projects = getFolderProjects(folder.id);
+  if (projects.length === 0) {
+    return `
+      <div class="empty">
+        <div class="empty-icon">${ICON.project}</div>
+        <div class="empty-title">No projects in ${escapeHtml(folder.name)} yet</div>
+        <div style="margin-bottom:14px;">Projects group agents, skills, and MCPs together.</div>
+        <button class="btn btn-primary" onclick="openNewProject()">${ICON.plus} New project</button>
+      </div>
+    `;
+  }
+  return `
+    <div class="grid-cards">
+      ${projects.map(p => {
+        const agentCount = getProjectAgents(p.id).length;
+        const prodCount = getProjectAgents(p.id).filter(a => a.productionVersionId).length;
+        const skillCount = p.skillNodes.length;
+        const mcpCount = p.mcpNodes.length;
+        return `
+          <div class="item-card" data-project-card="${p.id}" data-folder="${folder.id}">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;">
+              <div class="item-avatar" style="background:${avatarBg(p.name)};">${ICON.project}</div>
+            </div>
+            <div class="item-card-info">
+              <h3 class="item-name">${escapeHtml(p.name)}</h3>
+              <p class="item-desc">${escapeHtml(p.description || 'No description.')}</p>
+            </div>
+            <div class="item-meta">
+              <span class="badge">${ICON.bot} ${agentCount} agent${agentCount === 1 ? '' : 's'}</span>
+              ${prodCount > 0 ? `<span class="badge prod">${prodCount} in prod</span>` : ''}
+              ${skillCount > 0 ? `<span class="badge skill">${skillCount} skill${skillCount === 1 ? '' : 's'}</span>` : ''}
+              ${mcpCount > 0 ? `<span class="badge mcp">${mcpCount} MCP${mcpCount === 1 ? '' : 's'}</span>` : ''}
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function agentsListHTML(project) {
+  const agents = getProjectAgents(project.id);
+  if (agents.length === 0) {
+    return `
+      <div class="empty">
+        <div class="empty-icon">${ICON.bot}</div>
+        <div class="empty-title">No agents in this project yet</div>
+        <div style="margin-bottom:14px;">Create your first agent — you can configure model, temperature, prompt, and tools.</div>
+        <button class="btn btn-primary" onclick="openNewAgent()">${ICON.plus} New agent</button>
+      </div>
+    `;
+  }
+  return `
+    <div class="grid-cards">
+      ${agents.map(a => {
+        const v = getVersion(a, a.activeVersionId) || a.versions[a.versions.length - 1];
+        const prodV = a.productionVersionId ? getVersion(a, a.productionVersionId) : null;
+        return `
+          <div class="item-card" data-agent-card="${a.id}">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px;">
+              <div class="item-avatar" style="background:${avatarBg(a.name)};">${initials(a.name)}</div>
+            </div>
+            <div class="item-card-info">
+              <h3 class="item-name">${escapeHtml(a.name)}</h3>
+              <p class="item-desc">${escapeHtml(a.description || 'No description.')}</p>
+            </div>
+            <div class="item-meta">
+              ${prodV ? `<span class="badge prod">${ICON.rocket} Prod ${prodV.label}</span>` : `<span class="badge draft">Draft</span>`}
+              <span class="badge version">${a.versions.length} version${a.versions.length === 1 ? '' : 's'}</span>
+              <span class="badge">${v.model.replace('claude-','').replace(/-/g,' ')}</span>
+            </div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+
+function membersHTML(folder) {
+  const canManage = isAdmin();
+  return `
+    <div style="max-width:720px;">
+      ${!canManage ? `<div class="admin-only-locked">${ICON.lock} Only workspace admins can add or remove members. You can view the list.</div>` : ''}
+      <div class="card">
+        <div class="card-header">
+          <div>
+            <div class="card-title">Members of ${escapeHtml(folder.name)}</div>
+            <div style="font-size:12px;color:var(--text-muted);margin-top:2px;">${folder.users.length} ${folder.users.length === 1 ? 'person has' : 'people have'} access to this folder and all its projects</div>
+          </div>
+          ${canManage ? `<button class="btn btn-primary btn-sm" id="add-user-btn">${ICON.plus} Add member</button>` : ''}
+        </div>
+        <div class="card-body">
+          <div class="user-list">
+            ${folder.users.map(u => `
+              <div class="user-row">
+                <div class="user-avatar-sm" style="background:${avatarBg(u.name)};">${initials(u.name)}</div>
+                <div class="user-name">${escapeHtml(u.name)}</div>
+                <span class="user-role">${u.role}</span>
+                ${canManage && u.id !== state.currentUser.id ? `<button class="btn btn-ghost btn-sm" data-remove-user="${u.id}" title="Remove">${ICON.x}</button>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function agentDetailHTML(agent) {
+  const v = getVersion(agent, agent.activeVersionId) || agent.versions[agent.versions.length - 1];
+  const isProd = agent.productionVersionId === v.id;
+  return `
+    <div class="detail-layout">
+      <div class="detail-main">
+        <div class="card">
+          <div class="card-header">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div class="item-avatar" style="background:${avatarBg(agent.name)};">${initials(agent.name)}</div>
+              <div>
+                <input class="input" id="agent-name-input" value="${escapeHtml(agent.name)}" style="font-size:15px;font-weight:600;border:none;padding:0;background:transparent;" />
+                <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">Editing <strong>${v.label}</strong>${isProd ? ' · in production' : ''}</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:6px;">
+              ${isProd
+                ? `<span class="badge prod">${ICON.rocket} Production</span>`
+                : `<button class="btn btn-success btn-sm" id="promote-btn">${ICON.rocket} Promote to production</button>`}
+              <button class="btn btn-ghost btn-sm" id="duplicate-version-btn">${ICON.copy} New version from this</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div class="form-row">
+              <label class="form-label">Description</label>
+              <textarea class="textarea" id="agent-desc-input" style="min-height:60px;font-family:inherit;font-size:13px;">${escapeHtml(agent.description || '')}</textarea>
+            </div>
+            <div class="form-row">
+              <label class="form-label">System prompt</label>
+              <textarea class="textarea" id="agent-prompt-input" placeholder="Describe how the agent should behave...">${escapeHtml(v.systemPrompt || '')}</textarea>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+              <div class="form-row">
+                <label class="form-label">Model</label>
+                <select class="select" id="agent-model-input">
+                  ${MODELS.map(m => `<option value="${m.id}" ${v.model === m.id ? 'selected' : ''}>${m.name}</option>`).join('')}
+                </select>
+                <div class="form-hint">${(MODELS.find(m => m.id === v.model) || {}).desc || ''}</div>
+              </div>
+              <div class="form-row">
+                <label class="form-label">Max tokens</label>
+                <input type="number" class="input" id="agent-max-input" value="${v.maxTokens}" min="1" max="200000" />
+                <div class="form-hint">Upper bound on response length</div>
+              </div>
+            </div>
+            <div class="form-row">
+              <label class="form-label">Temperature <span style="font-weight:400;color:var(--text-muted);">— controls randomness</span></label>
+              <div class="slider-row">
+                <input type="range" class="slider" id="agent-temp-input" min="0" max="1" step="0.05" value="${v.temperature}" />
+                <span class="slider-value" id="agent-temp-value">${Number(v.temperature).toFixed(2)}</span>
+              </div>
+              <div class="form-hint">0 = deterministic, 1 = creative</div>
+            </div>
+            <div class="form-row">
+              <label class="form-label">Top-P <span style="font-weight:400;color:var(--text-muted);">— nucleus sampling</span></label>
+              <div class="slider-row">
+                <input type="range" class="slider" id="agent-topp-input" min="0" max="1" step="0.05" value="${v.topP}" />
+                <span class="slider-value" id="agent-topp-value">${Number(v.topP).toFixed(2)}</span>
+              </div>
+            </div>
+            <div class="form-row">
+              <label class="form-label">Tools enabled</label>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;">
+                ${['web_search','knowledge_search','classify','route','escalate','tone_detect','crm_lookup','calendar'].map(t => {
+                  const on = (v.tools || []).includes(t);
+                  return `<button type="button" class="badge tool-toggle" data-tool="${t}" style="cursor:pointer;${on ? 'background:var(--primary-soft);color:var(--primary);' : ''}">${on ? ICON.check : ''} ${t}</button>`;
+                }).join('')}
+              </div>
+              <div class="form-hint">To connect this agent to skills or MCPs, open the project Flow view.</div>
+            </div>
+            <div style="display:flex;gap:8px;padding-top:8px;border-top:1px solid var(--border);margin-top:8px;">
+              <button class="btn btn-primary" id="save-agent-btn">${ICON.check} Save changes</button>
+              <button class="btn btn-ghost" id="discard-btn">Discard</button>
+              <div style="flex:1;"></div>
+              <button class="btn btn-danger btn-sm" id="delete-agent-btn">${ICON.trash} Delete agent</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="detail-side">
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">${ICON.history} Versions</div>
+            <span style="font-size:11px;color:var(--text-muted);">${agent.versions.length} total</span>
+          </div>
+          <div class="card-body">
+            <div class="version-list">
+              ${[...agent.versions].reverse().map(ver => {
+                const active = ver.id === agent.activeVersionId ? 'active' : '';
+                const prod = ver.id === agent.productionVersionId;
+                return `
+                  <div class="version-item ${active}" data-version="${ver.id}">
+                    <span class="version-num">${ver.label}</span>
+                    <div class="version-info">
+                      <div class="version-msg">${escapeHtml(ver.message)}</div>
+                      <div class="version-meta">${ver.author} · ${ver.createdAt}</div>
+                    </div>
+                    ${prod ? `<span class="badge prod" title="Production version">${ICON.rocket}</span>` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function canvasHTML(project) {
+  return `
+    <div class="canvas-toolbar">
+      <button id="zoom-in-btn" title="Zoom in">${ICON.zoomIn}</button>
+      <button id="zoom-out-btn" title="Zoom out">${ICON.zoomOut}</button>
+      <button id="fit-btn" title="Reset view">${ICON.fit}</button>
+    </div>
+    <div class="add-node-bar">
+      <button class="agent-btn" id="add-agent-canvas-btn" title="Add agent">${ICON.bot} Add agent</button>
+      <button class="skill-btn" id="add-skill-canvas-btn" title="Add skill">${ICON.sparkle} Add skill</button>
+      <button class="mcp-btn" id="add-mcp-canvas-btn" title="Add MCP">${ICON.plug} Add MCP</button>
+    </div>
+    <div class="canvas" id="canvas">
+      <svg class="canvas-svg" id="canvas-svg"></svg>
+      <div class="canvas-inner" id="canvas-inner"></div>
+    </div>
+    <div class="canvas-hint">Drag from <span style="color:var(--primary);font-weight:600;">○</span> port to connect · <kbd>Scroll</kbd> zoom · <kbd>Space + drag</kbd> pan · double-click agent to edit</div>
+  `;
+}
+
+function renderCanvas() {
+  const project = getProject(state.selectedProjectId);
+  if (!project) return;
+  const agents = getProjectAgents(project.id);
+  const inner = $('#canvas-inner');
+  const svg = $('#canvas-svg');
+  if (!inner || !svg) return;
+
+  const { zoom, panX, panY } = state.canvas;
+  inner.style.transform = `translate(${panX}px, ${panY}px) scale(${zoom})`;
+
+  const agentNodes = agents.map(a => {
+    const prodCls = a.productionVersionId ? 'prod' : '';
+    const sel = state.selectedAgentId === a.id ? 'selected' : '';
+    const v = getVersion(a, a.activeVersionId);
+    const tempStr = v ? `T=${Number(v.temperature).toFixed(2)}` : '';
+    return `
+      <div class="canvas-node agent ${prodCls} ${sel}" data-node="${a.id}" data-node-type="agent" style="left:${a.position.x}px;top:${a.position.y}px;">
+        <div class="canvas-node-delete" data-delete-node="${a.id}" data-node-type="agent" title="Remove from canvas">${ICON.x}</div>
+        <div class="canvas-port input" data-port="in" data-node="${a.id}"></div>
+        <div class="canvas-node-header">
+          <div class="canvas-node-avatar" style="background:${avatarBg(a.name)};">${initials(a.name)}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="canvas-node-type" style="color:var(--primary);">Agent</div>
+            <div class="canvas-node-name">${escapeHtml(a.name)}</div>
+          </div>
+        </div>
+        <div class="canvas-node-meta">
+          ${a.productionVersionId ? `<span style="color:var(--success);font-weight:600;">● PROD</span>` : `<span style="color:var(--warning);font-weight:600;">● DRAFT</span>`}
+          <span>${tempStr}</span>
+        </div>
+        <div class="canvas-port output" data-port="out" data-node="${a.id}"></div>
+      </div>
+    `;
+  }).join('');
+
+  const skillNodes = project.skillNodes.map(sn => {
+    const skill = SKILL_CATALOG.find(s => s.id === sn.skillId);
+    if (!skill) return '';
+    return `
+      <div class="canvas-node skill" data-node="${sn.id}" data-node-type="skill" style="left:${sn.position.x}px;top:${sn.position.y}px;">
+        <div class="canvas-node-delete" data-delete-node="${sn.id}" data-node-type="skill" title="Remove">${ICON.x}</div>
+        <div class="canvas-port input" data-port="in" data-node="${sn.id}"></div>
+        <div class="canvas-node-header">
+          <div class="canvas-node-avatar skill">${ICON.sparkle}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="canvas-node-type" style="color:var(--purple);">Skill</div>
+            <div class="canvas-node-name">${escapeHtml(skill.name)}</div>
+          </div>
+        </div>
+        <div class="canvas-node-meta">${escapeHtml(skill.desc)}</div>
+        <div class="canvas-port output" data-port="out" data-node="${sn.id}"></div>
+      </div>
+    `;
+  }).join('');
+
+  const mcpNodes = project.mcpNodes.map(mn => {
+    const mcp = MCP_CATALOG.find(m => m.id === mn.mcpId);
+    if (!mcp) return '';
+    return `
+      <div class="canvas-node mcp" data-node="${mn.id}" data-node-type="mcp" style="left:${mn.position.x}px;top:${mn.position.y}px;">
+        <div class="canvas-node-delete" data-delete-node="${mn.id}" data-node-type="mcp" title="Remove">${ICON.x}</div>
+        <div class="canvas-port input" data-port="in" data-node="${mn.id}"></div>
+        <div class="canvas-node-header">
+          <div class="canvas-node-avatar mcp">${ICON.plug}</div>
+          <div style="flex:1;min-width:0;">
+            <div class="canvas-node-type" style="color:var(--teal);">MCP</div>
+            <div class="canvas-node-name">${escapeHtml(mcp.name)}</div>
+          </div>
+        </div>
+        <div class="canvas-node-meta">${escapeHtml(mcp.desc)}</div>
+        <div class="canvas-port output" data-port="out" data-node="${mn.id}"></div>
+      </div>
+    `;
+  }).join('');
+
+  inner.innerHTML = agentNodes + skillNodes + mcpNodes;
+
+  redrawConnections();
+  attachCanvasEvents();
+}
+
+// Find any node (agent | skill | mcp) by id and return its render info
+function findCanvasNode(project, id) {
+  const a = getProjectAgents(project.id).find(x => x.id === id);
+  if (a) return { id, type: 'agent', name: a.name, position: a.position };
+  const sn = project.skillNodes.find(x => x.id === id);
+  if (sn) { const s = SKILL_CATALOG.find(s => s.id === sn.skillId); return { id, type: 'skill', name: s ? s.name : 'Skill', position: sn.position }; }
+  const mn = project.mcpNodes.find(x => x.id === id);
+  if (mn) { const m = MCP_CATALOG.find(s => s.id === mn.mcpId); return { id, type: 'mcp', name: m ? m.name : 'MCP', position: mn.position }; }
+  return null;
+}
+
+function connectionPath(project, c, zoom, panX, panY) {
+  const from = findCanvasNode(project, c.from);
+  const to = findCanvasNode(project, c.to);
+  if (!from || !to) return '';
+  const NODE_W = 200, NODE_H = 72;
+  const sx = (from.position.x + NODE_W) * zoom + panX;
+  const sy = (from.position.y + NODE_H / 2) * zoom + panY;
+  const ex = to.position.x * zoom + panX;
+  const ey = (to.position.y + NODE_H / 2) * zoom + panY;
+  const dx = Math.abs(ex - sx) * 0.5;
+  const path = `M ${sx} ${sy} C ${sx + dx} ${sy}, ${ex - dx} ${ey}, ${ex} ${ey}`;
+  return `<path class="connection-line" d="${path}" marker-end="url(#arrowhead)" data-conn="${c.id}"/>`;
+}
+
+function modalHTML() {
+  const m = state.modal;
+  return `
+    <div class="modal-backdrop" id="modal-backdrop">
+      <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+          <div class="modal-title">${m.title}</div>
+          <button class="icon-btn" id="modal-close">${ICON.x}</button>
+        </div>
+        <div class="modal-body">${m.body}</div>
+        ${m.footer !== false ? `
+          <div class="modal-footer">
+            <button class="btn btn-secondary" id="modal-cancel">${m.cancelLabel || 'Cancel'}</button>
+            <button class="btn ${m.submitVariant || 'btn-primary'}" id="modal-submit" ${m.submitDisabled ? 'disabled' : ''}>${m.submitLabel || 'Create'}</button>
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function toastHTML() { return `<div class="toast ${state.toast.type}">${state.toast.type === 'success' ? ICON.check : ''} ${escapeHtml(state.toast.msg)}</div>`; }
+
+/* ============================================================ EVENTS ============================================================ */
+function attachEvents() {
+  document.querySelectorAll('#role-toggle button').forEach(b => {
+    b.onclick = () => { state.role = b.dataset.role; render(); };
+  });
+
+  // Tree toggles
+  document.querySelectorAll('[data-toggle-folder]').forEach(el => {
+    el.onclick = e => {
+      e.stopPropagation();
+      const id = el.dataset.toggleFolder;
+      if (state.expandedFolders.has(id)) state.expandedFolders.delete(id);
+      else state.expandedFolders.add(id);
+      render();
+    };
+  });
+  document.querySelectorAll('[data-toggle-project]').forEach(el => {
+    el.onclick = e => {
+      e.stopPropagation();
+      const id = el.dataset.toggleProject;
+      if (state.expandedProjects.has(id)) state.expandedProjects.delete(id);
+      else state.expandedProjects.add(id);
+      render();
+    };
+  });
+
+  // Tree row selections
+  document.querySelectorAll('.tree-row[data-folder]:not([data-project]):not([data-agent])').forEach(el => {
+    el.onclick = () => {
+      state.selectedFolderId = el.dataset.folder;
+      state.selectedProjectId = null;
+      state.selectedAgentId = null;
+      state.activeTab = 'projects';
+      state.expandedFolders.add(el.dataset.folder);
+      render();
+    };
+  });
+  document.querySelectorAll('.tree-row[data-project]:not([data-agent])').forEach(el => {
+    el.onclick = () => {
+      state.selectedFolderId = el.dataset.folder;
+      state.selectedProjectId = el.dataset.project;
+      state.selectedAgentId = null;
+      state.activeTab = 'agents';
+      state.expandedFolders.add(el.dataset.folder);
+      state.expandedProjects.add(el.dataset.project);
+      render();
+    };
+  });
+  document.querySelectorAll('.tree-row[data-agent]').forEach(el => {
+    el.onclick = () => {
+      state.selectedFolderId = el.dataset.folder;
+      state.selectedProjectId = el.dataset.project;
+      state.selectedAgentId = el.dataset.agent;
+      render();
+    };
+  });
+
+  // Breadcrumb
+  document.querySelectorAll('[data-crumb-folder]').forEach(el => {
+    el.onclick = () => {
+      state.selectedFolderId = el.dataset.crumbFolder;
+      state.selectedProjectId = null; state.selectedAgentId = null;
+      state.activeTab = 'projects';
+      render();
+    };
+  });
+  document.querySelectorAll('[data-crumb-project]').forEach(el => {
+    el.onclick = () => {
+      state.selectedProjectId = el.dataset.crumbProject;
+      state.selectedAgentId = null;
+      state.activeTab = 'agents';
+      render();
+    };
+  });
+
+  // Tabs
+  document.querySelectorAll('.tab').forEach(t => {
+    t.onclick = () => { state.activeTab = t.dataset.tab; render(); };
+  });
+
+  // Project / agent cards
+  document.querySelectorAll('[data-project-card]').forEach(el => {
+    el.onclick = () => {
+      state.selectedFolderId = el.dataset.folder;
+      state.selectedProjectId = el.dataset.projectCard;
+      state.selectedAgentId = null;
+      state.activeTab = 'agents';
+      state.expandedFolders.add(el.dataset.folder);
+      state.expandedProjects.add(el.dataset.projectCard);
+      render();
+    };
+  });
+  document.querySelectorAll('[data-agent-card]').forEach(el => {
+    el.onclick = () => { state.selectedAgentId = el.dataset.agentCard; render(); };
+  });
+
+  // Top-level add buttons
+  const addFolderBtn = $('#add-folder-btn');
+  if (addFolderBtn) addFolderBtn.onclick = openNewFolder;
+  const newProjectBtn = $('#new-project-btn');
+  if (newProjectBtn) newProjectBtn.onclick = openNewProject;
+  const newAgentBtn = $('#new-agent-btn');
+  if (newAgentBtn) newAgentBtn.onclick = openNewAgent;
+  const backBtn = $('#back-to-project');
+  if (backBtn) backBtn.onclick = () => { state.selectedAgentId = null; render(); };
+
+  // Members
+  const addUser = $('#add-user-btn');
+  if (addUser) addUser.onclick = openAddUser;
+  document.querySelectorAll('[data-remove-user]').forEach(b => {
+    b.onclick = () => {
+      const folder = getFolder(state.selectedFolderId);
+      folder.users = folder.users.filter(u => u.id !== b.dataset.removeUser);
+      showToast('Member removed');
+    };
+  });
+
+  // Canvas add buttons
+  const addAgentC = $('#add-agent-canvas-btn');
+  if (addAgentC) addAgentC.onclick = openAddAgentToCanvas;
+  const addSkillC = $('#add-skill-canvas-btn');
+  if (addSkillC) addSkillC.onclick = openAddSkill;
+  const addMcpC = $('#add-mcp-canvas-btn');
+  if (addMcpC) addMcpC.onclick = openAddMcp;
+
+  attachAgentDetailEvents();
+  if (state.modal) attachModalEvents();
+}
+
+function attachAgentDetailEvents() {
+  const agent = state.selectedAgentId ? getAgent(state.selectedAgentId) : null;
+  if (!agent) return;
+  const v = getVersion(agent, agent.activeVersionId);
+
+  const temp = $('#agent-temp-input');
+  if (temp) temp.oninput = () => { $('#agent-temp-value').textContent = Number(temp.value).toFixed(2); };
+  const topp = $('#agent-topp-input');
+  if (topp) topp.oninput = () => { $('#agent-topp-value').textContent = Number(topp.value).toFixed(2); };
+
+  document.querySelectorAll('.tool-toggle').forEach(b => {
+    b.onclick = () => {
+      const tool = b.dataset.tool;
+      const tools = v.tools || [];
+      if (tools.includes(tool)) v.tools = tools.filter(t => t !== tool);
+      else v.tools = [...tools, tool];
+      render();
+    };
+  });
+
+  const save = $('#save-agent-btn');
+  if (save) save.onclick = () => {
+    agent.name = $('#agent-name-input').value.trim() || agent.name;
+    agent.description = $('#agent-desc-input').value;
+    v.systemPrompt = $('#agent-prompt-input').value;
+    v.model = $('#agent-model-input').value;
+    v.maxTokens = parseInt($('#agent-max-input').value) || v.maxTokens;
+    v.temperature = parseFloat($('#agent-temp-input').value);
+    v.topP = parseFloat($('#agent-topp-input').value);
+    showToast('Changes saved to ' + v.label);
+  };
+
+  const discard = $('#discard-btn');
+  if (discard) discard.onclick = () => render();
+
+  const prom = $('#promote-btn');
+  if (prom) prom.onclick = () => openPromoteModal(agent, v);
+
+  const dup = $('#duplicate-version-btn');
+  if (dup) dup.onclick = () => {
+    const nextLabel = 'v' + (agent.versions.length + 1);
+    const newV = {
+      ...JSON.parse(JSON.stringify(v)),
+      id: uid('v'), label: nextLabel,
+      message: 'Forked from ' + v.label,
+      author: state.currentUser.name, createdAt: '2026-05-12',
+    };
+    agent.versions.push(newV);
+    agent.activeVersionId = newV.id;
+    showToast(`Created ${nextLabel}`);
+  };
+
+  const del = $('#delete-agent-btn');
+  if (del) del.onclick = () => {
+    if (!confirm(`Delete agent "${agent.name}"? This can't be undone.`)) return;
+    state.agents = state.agents.filter(a => a.id !== agent.id);
+    // remove agent from project connections
+    state.projects.forEach(p => {
+      p.connections = p.connections.filter(c => c.from !== agent.id && c.to !== agent.id);
+    });
+    state.selectedAgentId = null;
+    showToast('Agent deleted');
+  };
+
+  document.querySelectorAll('[data-version]').forEach(el => {
+    el.onclick = () => { agent.activeVersionId = el.dataset.version; render(); };
+  });
+}
+
+function attachModalEvents() {
+  const close = () => { state.modal = null; render(); };
+  $('#modal-close').onclick = close;
+  const cancel = $('#modal-cancel');
+  if (cancel) cancel.onclick = close;
+  $('#modal-backdrop').onclick = close;
+  const submit = $('#modal-submit');
+  if (submit) submit.onclick = () => {
+    const ok = state.modal.onSubmit();
+    if (ok !== false) close();
+  };
+  if (state.modal.onAttach) state.modal.onAttach();
+}
+
+/* ============================================================ MODAL OPENERS ============================================================ */
+function openNewFolder() {
+  if (!isAdmin()) { showToast('Only admins can create folders', 'error'); return; }
+  state.modal = {
+    title: 'New folder',
+    submitLabel: 'Create folder',
+    body: `
+      <div class="modal-intro">Folders are the top level of your workspace — typically one per team. They hold projects, which hold agents.</div>
+      <div class="form-row">
+        <label class="form-label">Folder name</label>
+        <input class="input" id="new-folder-name" placeholder="e.g. Marketing Operations" autofocus />
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);">You'll be added as admin. Add more members after creating.</div>
+    `,
+    onSubmit: () => {
+      const name = $('#new-folder-name').value.trim();
+      if (!name) return false;
+      const id = uid('f');
+      state.folders.push({ id, name, users: [{ id: state.currentUser.id, name: state.currentUser.name, role: 'Admin' }] });
+      state.selectedFolderId = id;
+      state.selectedProjectId = null; state.selectedAgentId = null;
+      state.activeTab = 'projects';
+      state.expandedFolders.add(id);
+      showToast(`Created "${name}"`);
+    },
+  };
+  render();
+  setTimeout(() => $('#new-folder-name').focus(), 50);
+}
+
+function openNewProject() {
+  state.modal = {
+    title: 'New project',
+    submitLabel: 'Create project',
+    body: `
+      <div class="modal-intro">A project groups agents, skills, and MCPs together — you'll wire them up in the Flow view.</div>
+      <div class="form-row">
+        <label class="form-label">Project name</label>
+        <input class="input" id="new-project-name" placeholder="e.g. Inbound Ticket Pipeline" autofocus />
+      </div>
+      <div class="form-row">
+        <label class="form-label">Description (optional)</label>
+        <input class="input" id="new-project-desc" placeholder="What does this project do?" />
+      </div>
+    `,
+    onSubmit: () => {
+      const name = $('#new-project-name').value.trim();
+      if (!name) return false;
+      const desc = $('#new-project-desc').value.trim();
+      const id = uid('p');
+      state.projects.push({
+        id, folderId: state.selectedFolderId, name, description: desc,
+        skillNodes: [], mcpNodes: [], connections: [],
+      });
+      state.selectedProjectId = id;
+      state.selectedAgentId = null;
+      state.activeTab = 'agents';
+      state.expandedProjects.add(id);
+      showToast(`Created "${name}"`);
+    },
+  };
+  render();
+  setTimeout(() => $('#new-project-name').focus(), 50);
+}
+
+function openNewAgent() {
+  state.modal = {
+    title: 'New agent',
+    submitLabel: 'Create agent',
+    body: `
+      <div class="form-row">
+        <label class="form-label">Agent name</label>
+        <input class="input" id="new-agent-name" placeholder="e.g. Invoice Extractor" autofocus />
+      </div>
+      <div class="form-row">
+        <label class="form-label">Description</label>
+        <input class="input" id="new-agent-desc" placeholder="One-line description of what this agent does" />
+      </div>
+      <div class="form-row">
+        <label class="form-label">Starting model</label>
+        <select class="select" id="new-agent-model">
+          ${MODELS.map(m => `<option value="${m.id}">${m.name} — ${m.desc}</option>`).join('')}
+        </select>
+      </div>
+    `,
+    onSubmit: () => {
+      const name = $('#new-agent-name').value.trim();
+      if (!name) return false;
+      const desc = $('#new-agent-desc').value.trim();
+      const model = $('#new-agent-model').value;
+      const aid = uid('a');
+      const vid = uid('v');
+      const v = {
+        id: vid, label: 'v1', message: 'Initial draft', author: state.currentUser.name, createdAt: '2026-05-12',
+        model, temperature: 0.7, maxTokens: 1024, topP: 1,
+        systemPrompt: 'You are a helpful assistant.', tools: [],
+      };
+      const agents = getProjectAgents(state.selectedProjectId);
+      const offset = agents.length * 40;
+      state.agents.push({
+        id: aid, projectId: state.selectedProjectId, name, description: desc,
+        productionVersionId: null, activeVersionId: vid, versions: [v],
+        position: { x: 100 + offset, y: 100 + offset },
+      });
+      state.selectedAgentId = aid;
+      showToast(`Created "${name}"`);
+    },
+  };
+  render();
+  setTimeout(() => $('#new-agent-name').focus(), 50);
+}
+
+function openAddUser() {
+  if (!isAdmin()) { showToast('Only admins can add members', 'error'); return; }
+  state.modal = {
+    title: 'Add member',
+    submitLabel: 'Add member',
+    body: `
+      <div class="form-row">
+        <label class="form-label">Email address</label>
+        <input class="input" id="new-user-email" type="email" placeholder="name@company.com" autofocus />
+      </div>
+      <div class="form-row">
+        <label class="form-label">Role in this folder</label>
+        <select class="select" id="new-user-role">
+          <option value="Editor">Editor — can create and edit agents</option>
+          <option value="Viewer">Viewer — read-only access</option>
+          <option value="Admin">Admin — full control over folder</option>
+        </select>
+      </div>
+    `,
+    onSubmit: () => {
+      const email = $('#new-user-email').value.trim();
+      if (!email) return false;
+      const role = $('#new-user-role').value;
+      const name = email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+      const folder = getFolder(state.selectedFolderId);
+      folder.users.push({ id: uid('u'), name, role });
+      showToast(`Invited ${name}`);
+    },
+  };
+  render();
+  setTimeout(() => $('#new-user-email').focus(), 50);
+}
+
+function openAddAgentToCanvas() {
+  // Just open new agent for the current project — it lands on the canvas
+  openNewAgent();
+}
+
+function openAddSkill() {
+  let selected = null;
+  state.modal = {
+    title: 'Add a skill to this project',
+    submitLabel: 'Add skill',
+    submitDisabled: true,
+    body: `
+      <div class="modal-intro">Skills are reusable capabilities you can wire into your agents — like classifying text or redacting PII.</div>
+      <div class="modal-picker-list" id="skill-picker">
+        ${SKILL_CATALOG.map(s => `
+          <div class="modal-picker-item" data-skill-pick="${s.id}">
+            <div class="item-avatar" style="width:32px;height:32px;font-size:12px;background:linear-gradient(135deg,#7739D9,#9b5cf0);">${ICON.sparkle}</div>
+            <div style="flex:1;">
+              <div style="font-weight:600;font-size:13px;">${escapeHtml(s.name)}</div>
+              <div style="font-size:12px;color:var(--text-muted);">${escapeHtml(s.desc)}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `,
+    onAttach: () => {
+      document.querySelectorAll('[data-skill-pick]').forEach(el => {
+        el.onclick = () => {
+          selected = el.dataset.skillPick;
+          document.querySelectorAll('[data-skill-pick]').forEach(x => x.classList.toggle('selected', x === el));
+          $('#modal-submit').disabled = false;
+        };
+      });
+    },
+    onSubmit: () => {
+      if (!selected) return false;
+      const project = getProject(state.selectedProjectId);
+      const offset = project.skillNodes.length * 50;
+      project.skillNodes.push({ id: uid('sn'), skillId: selected, position: { x: 120 + offset, y: 420 + offset } });
+      const skill = SKILL_CATALOG.find(s => s.id === selected);
+      showToast(`Added skill "${skill.name}"`);
+    },
+  };
+  render();
+}
+
+function openAddMcp() {
+  let selected = null;
+  state.modal = {
+    title: 'Add an MCP to this project',
+    submitLabel: 'Add MCP',
+    submitDisabled: true,
+    body: `
+      <div class="modal-intro">MCPs (Model Context Protocol servers) give your agents access to external tools and data sources.</div>
+      <div class="modal-picker-list" id="mcp-picker">
+        ${MCP_CATALOG.map(m => `
+          <div class="modal-picker-item" data-mcp-pick="${m.id}">
+            <div class="item-avatar" style="width:32px;height:32px;font-size:12px;background:linear-gradient(135deg,#0d9488,#06b6d4);">${ICON.plug}</div>
+            <div style="flex:1;">
+              <div style="font-weight:600;font-size:13px;">${escapeHtml(m.name)}</div>
+              <div style="font-size:12px;color:var(--text-muted);">${escapeHtml(m.desc)}</div>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `,
+    onAttach: () => {
+      document.querySelectorAll('[data-mcp-pick]').forEach(el => {
+        el.onclick = () => {
+          selected = el.dataset.mcpPick;
+          document.querySelectorAll('[data-mcp-pick]').forEach(x => x.classList.toggle('selected', x === el));
+          $('#modal-submit').disabled = false;
+        };
+      });
+    },
+    onSubmit: () => {
+      if (!selected) return false;
+      const project = getProject(state.selectedProjectId);
+      const offset = project.mcpNodes.length * 50;
+      project.mcpNodes.push({ id: uid('mn'), mcpId: selected, position: { x: 800 + offset, y: 420 + offset } });
+      const mcp = MCP_CATALOG.find(m => m.id === selected);
+      showToast(`Added MCP "${mcp.name}"`);
+    },
+  };
+  render();
+}
+
+function openPromoteModal(agent, v) {
+  let toggles = { legal: false, share: false, sidekick: false };
+  const updateSubmitState = () => {
+    const btn = $('#modal-submit');
+    if (btn) btn.disabled = !toggles.legal;
+  };
+  const updateRowVisuals = () => {
+    Object.keys(toggles).forEach(k => {
+      const row = document.querySelector(`[data-toggle-row="${k}"]`);
+      if (row) row.classList.toggle('on', toggles[k]);
+    });
+  };
+
+  state.modal = {
+    title: `Promote ${v.label} to production`,
+    submitLabel: 'Promote',
+    submitVariant: 'btn-success',
+    submitDisabled: true,
+    cancelLabel: 'Cancel',
+    body: `
+      <div class="modal-intro">
+        You're about to make <strong>${escapeHtml(agent.name)} ${v.label}</strong> the production version. Confirm the items below before promoting.
+      </div>
+
+      <div class="toggle-row required" data-toggle-row="legal">
+        <div class="toggle-info">
+          <div class="toggle-title">Approved by Legal & Security <span class="toggle-required-tag">Required</span></div>
+          <div class="toggle-desc">Compliance review has been completed for this version's prompt, tools, and data access.</div>
+        </div>
+        <label class="switch required">
+          <input type="checkbox" id="toggle-legal" />
+          <span class="switch-slider"></span>
+        </label>
+      </div>
+
+      <div class="toggle-row" data-toggle-row="share">
+        <div class="toggle-info">
+          <div class="toggle-title">Share with Others</div>
+          <div class="toggle-desc">Make this agent discoverable to other members of the workspace, not just this project.</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="toggle-share" />
+          <span class="switch-slider"></span>
+        </label>
+      </div>
+
+      <div class="toggle-row" data-toggle-row="sidekick">
+        <div class="toggle-info">
+          <div class="toggle-title">Promote to Sidekick</div>
+          <div class="toggle-desc">Publish this agent to the Sidekick gallery so teammates can invoke it from anywhere in EAP.</div>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="toggle-sidekick" />
+          <span class="switch-slider"></span>
+        </label>
+      </div>
+    `,
+    onAttach: () => {
+      $('#toggle-legal').onchange = e => { toggles.legal = e.target.checked; updateRowVisuals(); updateSubmitState(); };
+      $('#toggle-share').onchange = e => { toggles.share = e.target.checked; updateRowVisuals(); updateSubmitState(); };
+      $('#toggle-sidekick').onchange = e => { toggles.sidekick = e.target.checked; updateRowVisuals(); updateSubmitState(); };
+    },
+    onSubmit: () => {
+      if (!toggles.legal) return false;
+      agent.productionVersionId = v.id;
+      agent.shared = toggles.share;
+      agent.sidekick = toggles.sidekick;
+      const extras = [];
+      if (toggles.share) extras.push('shared');
+      if (toggles.sidekick) extras.push('added to Sidekick');
+      const suffix = extras.length ? ` · ${extras.join(' · ')}` : '';
+      showToast(`${agent.name} ${v.label} promoted to production${suffix}`);
+    },
+  };
+  render();
+}
+
+/* ============================================================ CANVAS — drag, pan, zoom, connect ============================================================ */
+let canvasDragState = null;
+let canvasPanState = null;
+let connectDragState = null;
+let spacePressed = false;
+
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space' && !spacePressed && !isTypingTarget(e.target)) {
+    spacePressed = true;
+    const c = $('#canvas');
+    if (c) c.style.cursor = 'grab';
+  }
+});
+document.addEventListener('keyup', e => {
+  if (e.code === 'Space') {
+    spacePressed = false;
+    const c = $('#canvas');
+    if (c) c.style.cursor = '';
+  }
+});
+function isTypingTarget(el) {
+  return el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT');
+}
+
+function attachCanvasEvents() {
+  const canvas = $('#canvas');
+  const inner = $('#canvas-inner');
+  if (!canvas) return;
+
+  canvas.onwheel = e => {
+    e.preventDefault();
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const oldZoom = state.canvas.zoom;
+    const delta = -e.deltaY * 0.001;
+    const newZoom = Math.max(0.3, Math.min(2, oldZoom + delta * oldZoom));
+    state.canvas.panX = mx - (mx - state.canvas.panX) * (newZoom / oldZoom);
+    state.canvas.panY = my - (my - state.canvas.panY) * (newZoom / oldZoom);
+    state.canvas.zoom = newZoom;
+    renderCanvas();
+  };
+
+  canvas.onmousedown = e => {
+    if (e.target === canvas || e.target.id === 'canvas-svg' || spacePressed) {
+      canvasPanState = { startX: e.clientX, startY: e.clientY, origX: state.canvas.panX, origY: state.canvas.panY };
+      canvas.classList.add('panning');
+      e.preventDefault();
+    }
+  };
+
+  inner.querySelectorAll('.canvas-node').forEach(node => {
+    node.onmousedown = e => {
+      if (e.target.classList.contains('canvas-port')) return;
+      if (e.target.closest('.canvas-node-delete')) return;
+      if (spacePressed) return;
+      const id = node.dataset.node;
+      const type = node.dataset.nodeType;
+      const project = getProject(state.selectedProjectId);
+      let origPos;
+      if (type === 'agent') origPos = getAgent(id).position;
+      else if (type === 'skill') origPos = project.skillNodes.find(x => x.id === id).position;
+      else if (type === 'mcp') origPos = project.mcpNodes.find(x => x.id === id).position;
+      canvasDragState = {
+        id, type,
+        startX: e.clientX, startY: e.clientY,
+        origX: origPos.x, origY: origPos.y,
+      };
+      if (type === 'agent') state.selectedAgentId = id;
+      e.stopPropagation(); e.preventDefault();
+      document.querySelectorAll('.canvas-node').forEach(n => n.classList.toggle('selected', n.dataset.node === id));
+    };
+    node.ondblclick = e => {
+      const type = node.dataset.nodeType;
+      if (type === 'agent') {
+        state.selectedAgentId = node.dataset.node;
+        render();
+      }
+    };
+  });
+
+  inner.querySelectorAll('.canvas-node-delete').forEach(btn => {
+    btn.onclick = e => {
+      e.stopPropagation();
+      const id = btn.dataset.deleteNode;
+      const type = btn.dataset.nodeType;
+      const project = getProject(state.selectedProjectId);
+      if (type === 'skill') {
+        if (!confirm('Remove this skill from the canvas?')) return;
+        project.skillNodes = project.skillNodes.filter(s => s.id !== id);
+      } else if (type === 'mcp') {
+        if (!confirm('Remove this MCP from the canvas?')) return;
+        project.mcpNodes = project.mcpNodes.filter(s => s.id !== id);
+      } else if (type === 'agent') {
+        showToast('Open the agent to delete it', 'error');
+        return;
+      }
+      project.connections = project.connections.filter(c => c.from !== id && c.to !== id);
+      renderCanvas();
+    };
+  });
+
+  inner.querySelectorAll('.canvas-port').forEach(port => {
+    port.onmousedown = e => {
+      e.stopPropagation(); e.preventDefault();
+      const isOutput = port.dataset.port === 'out';
+      connectDragState = {
+        fromNode: port.dataset.node,
+        fromIsOutput: isOutput,
+        mouseX: e.clientX, mouseY: e.clientY,
+      };
+      drawTempConnection(e.clientX, e.clientY);
+    };
+  });
+
+  $('#canvas-svg').querySelectorAll('.connection-line').forEach(p => {
+    p.onclick = () => {
+      const cid = p.dataset.conn;
+      if (confirm('Remove this connection?')) {
+        const project = getProject(state.selectedProjectId);
+        project.connections = project.connections.filter(c => c.id !== cid);
+        renderCanvas();
+      }
+    };
+  });
+
+  $('#zoom-in-btn').onclick = () => { state.canvas.zoom = Math.min(2, state.canvas.zoom * 1.2); renderCanvas(); };
+  $('#zoom-out-btn').onclick = () => { state.canvas.zoom = Math.max(0.3, state.canvas.zoom / 1.2); renderCanvas(); };
+  $('#fit-btn').onclick = () => { state.canvas.zoom = 1; state.canvas.panX = 0; state.canvas.panY = 0; renderCanvas(); };
+}
+
+document.addEventListener('mousemove', e => {
+  if (canvasDragState) {
+    const z = state.canvas.zoom;
+    const dx = (e.clientX - canvasDragState.startX) / z;
+    const dy = (e.clientY - canvasDragState.startY) / z;
+    const project = getProject(state.selectedProjectId);
+    let posTarget;
+    if (canvasDragState.type === 'agent') posTarget = getAgent(canvasDragState.id);
+    else if (canvasDragState.type === 'skill') posTarget = project.skillNodes.find(x => x.id === canvasDragState.id);
+    else if (canvasDragState.type === 'mcp') posTarget = project.mcpNodes.find(x => x.id === canvasDragState.id);
+    if (posTarget) {
+      posTarget.position.x = canvasDragState.origX + dx;
+      posTarget.position.y = canvasDragState.origY + dy;
+      const node = document.querySelector(`[data-node="${canvasDragState.id}"]`);
+      if (node) {
+        node.style.left = posTarget.position.x + 'px';
+        node.style.top = posTarget.position.y + 'px';
+      }
+      redrawConnections();
+    }
+  }
+  if (canvasPanState) {
+    state.canvas.panX = canvasPanState.origX + (e.clientX - canvasPanState.startX);
+    state.canvas.panY = canvasPanState.origY + (e.clientY - canvasPanState.startY);
+    const inner = $('#canvas-inner');
+    if (inner) inner.style.transform = `translate(${state.canvas.panX}px, ${state.canvas.panY}px) scale(${state.canvas.zoom})`;
+    redrawConnections();
+  }
+  if (connectDragState) drawTempConnection(e.clientX, e.clientY);
+});
+
+document.addEventListener('mouseup', e => {
+  if (canvasDragState) canvasDragState = null;
+  if (canvasPanState) {
+    canvasPanState = null;
+    const c = $('#canvas');
+    if (c) c.classList.remove('panning');
+  }
+  if (connectDragState) {
+    const el = document.elementFromPoint(e.clientX, e.clientY);
+    if (el && el.classList.contains('canvas-port')) {
+      const targetNode = el.dataset.node;
+      const targetIsInput = el.dataset.port === 'in';
+      const from = connectDragState.fromIsOutput ? connectDragState.fromNode : targetNode;
+      const to = connectDragState.fromIsOutput ? targetNode : connectDragState.fromNode;
+      if (from !== to && targetIsInput !== connectDragState.fromIsOutput) {
+        const project = getProject(state.selectedProjectId);
+        const exists = project.connections.some(c => c.from === from && c.to === to);
+        if (!exists) {
+          project.connections.push({ id: uid('c'), from, to });
+          const fromName = (findCanvasNode(project, from) || {}).name || 'node';
+          const toName = (findCanvasNode(project, to) || {}).name || 'node';
+          showToast(`Connected ${fromName} → ${toName}`);
+        }
+      }
+    }
+    connectDragState = null;
+    renderCanvas();
+  }
+});
+
+function drawTempConnection(mouseX, mouseY) {
+  const canvas = $('#canvas');
+  const svg = $('#canvas-svg');
+  if (!canvas || !svg) return;
+  const rect = canvas.getBoundingClientRect();
+  const project = getProject(state.selectedProjectId);
+  const fromInfo = findCanvasNode(project, connectDragState.fromNode);
+  if (!fromInfo) return;
+  const { zoom, panX, panY } = state.canvas;
+  const NODE_W = 200, NODE_H = 72;
+  let sx, sy;
+  if (connectDragState.fromIsOutput) {
+    sx = (fromInfo.position.x + NODE_W) * zoom + panX;
+    sy = (fromInfo.position.y + NODE_H / 2) * zoom + panY;
+  } else {
+    sx = fromInfo.position.x * zoom + panX;
+    sy = (fromInfo.position.y + NODE_H / 2) * zoom + panY;
+  }
+  const ex = mouseX - rect.left;
+  const ey = mouseY - rect.top;
+  const dx = Math.abs(ex - sx) * 0.5;
+  const path = `M ${sx} ${sy} C ${sx + dx} ${sy}, ${ex - dx} ${ey}, ${ex} ${ey}`;
+  redrawConnections();
+  svg.insertAdjacentHTML('beforeend', `<path class="connection-line temp" d="${path}"/>`);
+}
+
+function redrawConnections() {
+  const svg = $('#canvas-svg');
+  if (!svg) return;
+  const project = getProject(state.selectedProjectId);
+  if (!project) return;
+  const { zoom, panX, panY } = state.canvas;
+  // filter connections to only those whose endpoints exist
+  const valid = project.connections.filter(c => findCanvasNode(project, c.from) && findCanvasNode(project, c.to));
+  svg.innerHTML = `
+    <defs>
+      <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+        <path d="M0,0 L0,8 L8,4 z" fill="var(--primary)"/>
+      </marker>
+    </defs>
+    ${valid.map(c => connectionPath(project, c, zoom, panX, panY)).join('')}
+  `;
+  svg.querySelectorAll('.connection-line').forEach(p => {
+    p.onclick = () => {
+      const cid = p.dataset.conn;
+      if (confirm('Remove this connection?')) {
+        project.connections = project.connections.filter(c => c.id !== cid);
+        renderCanvas();
+      }
+    };
+  });
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+render();
+</script>
+</body>
+</html>
